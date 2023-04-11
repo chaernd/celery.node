@@ -43,6 +43,7 @@ function getProtocol(uri): string {
  * @param {String} CELERY_BROKER
  * @param {object} CELERY_BROKER_OPTIONS
  * @param {string} CELERY_QUEUE
+ * @param {object} CELERY_QUEUE_OPTIONS
  * @returns {CeleryBroker}
  */
 export function newCeleryBroker(
