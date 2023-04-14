@@ -160,7 +160,7 @@ export default class Worker extends Base {
       );
 
       const timeStart = process.hrtime();
-      const taskPromise = handler(...args, kwargs)
+      const taskPromise = handler(taskId, ...args, kwargs)
         .then((result) => {
           const diff = process.hrtime(timeStart);
           console.info(
