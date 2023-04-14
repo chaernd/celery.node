@@ -32,6 +32,23 @@ export default class Worker extends Base {
     };
   }
 
+  public registerWithContext(name: string, handler: Function): void {
+    if (!handler) {
+      throw new Error("Undefined handler");
+    }
+    if (this.handlers[name]) {
+      throw new Error("Handler is already set");
+    }
+
+    this.handlers[name] = function registHandler(...args: any[]): Promise<any> {
+      try {
+        return Promise.resolve(handler(this, ...args));
+      } catch (err) {
+        return Promise.reject(err);
+      }
+    };
+  }
+
   /**
    * Start celery worker to run
    * @method Worker#start
@@ -42,7 +59,7 @@ export default class Worker extends Base {
   public start(): Promise<any> {
     console.info("celery.node worker starting...");
     console.info(`registered task: ${Object.keys(this.handlers)}`);
-    return this.run().catch(err => console.error(err));
+    return this.run().catch((err) => console.error(err));
   }
 
   /**
@@ -105,7 +122,7 @@ export default class Worker extends Base {
           callbacks: payload["callbacks"],
           errbacks: payload["errbacks"],
           chord: payload["chord"],
-          chain: null
+          chain: null,
         };
 
         body = [args, kwargs, embed];
@@ -123,7 +140,7 @@ export default class Worker extends Base {
           retries: payload["retries"] || 0,
           timelimit: payload["timelimit"] || [null, null],
           kwargsrepr: payload["kwargsrepr"],
-          origin: payload["origin"]
+          origin: payload["origin"],
         };
       }
 
@@ -143,19 +160,23 @@ export default class Worker extends Base {
       );
 
       const timeStart = process.hrtime();
-      const taskPromise = handler(...args, kwargs).then(result => {
-        const diff = process.hrtime(timeStart);
-        console.info(
-          `celery.node Task ${taskName}[${taskId}] succeeded in ${diff[0] +
-            diff[1] / 1e9}s: ${result}`
-        );
-        this.backend.storeResult(taskId, result, "SUCCESS");
-        this.activeTasks.delete(taskPromise);
-      }).catch(err => {
-        console.info(`celery.node Task ${taskName}[${taskId}] failed: [${err}]`);
-        this.backend.storeResult(taskId, err, "FAILURE");
-        this.activeTasks.delete(taskPromise);
-      });
+      const taskPromise = handler(...args, kwargs)
+        .then((result) => {
+          const diff = process.hrtime(timeStart);
+          console.info(
+            `celery.node Task ${taskName}[${taskId}] succeeded in ${diff[0] +
+              diff[1] / 1e9}s: ${result}`
+          );
+          this.backend.storeResult(taskId, result, "SUCCESS");
+          this.activeTasks.delete(taskPromise);
+        })
+        .catch((err) => {
+          console.info(
+            `celery.node Task ${taskName}[${taskId}] failed: [${err}]`
+          );
+          this.backend.storeResult(taskId, err, "FAILURE");
+          this.activeTasks.delete(taskPromise);
+        });
 
       // record the executing task
       this.activeTasks.add(taskPromise);
